@@ -7,10 +7,6 @@ from openzeppelin.token.erc20.library import (
     ERC20_name, ERC20_symbol, ERC20_totalSupply, ERC20_decimals, ERC20_balanceOf,
     ERC20_allowance, ERC20_initializer, ERC20_approve, ERC20_transfer, ERC20_transferFrom)
 
-from openzeppelin.token.erc20.interfaces.IERC20 import IERC20
-
-# from openzeppelin.access.ownable import Ownable_initializer, Ownable_only_owner
-
 from openzeppelin.utils.constants import TRUE
 
 from erc4626.library import (
@@ -23,12 +19,8 @@ from erc4626.library import (
 
 @constructor
 func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        name : felt, symbol : felt, asset_addr : felt, owner : felt):
-    let (decimals) = IERC20.decimals(contract_address=asset_addr)
-    ERC20_initializer(name, symbol, decimals)
-    ERC4626_initializer(asset_addr)
-    # TODO: verify if Ownable is necessary
-    # Ownable_initializer(owner)
+        name : felt, symbol : felt, asset_addr : felt):
+    ERC4626_initializer(name, symbol, asset_addr)
     return ()
 end
 

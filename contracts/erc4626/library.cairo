@@ -26,7 +26,7 @@ end
 #
 
 @storage_var
-func ERC4626_asset_() -> (addr : felt):
+func ERC4626_asset_addr() -> (addr : felt):
 end
 
 #
@@ -34,8 +34,10 @@ end
 #
 
 func ERC4626_initializer{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        asset : felt):
-    ERC4626_asset_.write(asset)
+        name : felt, symbol : felt, asset_addr : felt):
+    let (decimals) = IERC20.decimals(contract_address=asset_addr)
+    ERC20_initializer(name, symbol, decimals)
+    ERC4626_asset_addr.write(asset_addr)
     return ()
 end
 
@@ -45,7 +47,7 @@ end
 
 func ERC4626_asset{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
         asset : felt):
-    let (asset) = ERC4626_asset_.read()
+    let (asset : felt) = ERC4626_asset_addr.read()
     return (asset)
 end
 
