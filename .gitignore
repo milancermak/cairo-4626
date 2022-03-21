@@ -3,3 +3,4 @@ Makefile
 accounts.json
 artifacts/*
 node.json
+__pycache__

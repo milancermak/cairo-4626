@@ -8,7 +8,7 @@ from starkware.cairo.common.uint256 import (
     ALL_ONES, Uint256, uint256_eq, uint256_add, uint256_mul, uint256_unsigned_div_rem, uint256_le)
 
 from openzeppelin.token.erc20.library import (
-    ERC20_totalSupply, ERC20_mint, ERC20_burn, ERC20_balanceOf, ERC20_allowance,
+    ERC20_initializer, ERC20_totalSupply, ERC20_mint, ERC20_burn, ERC20_balanceOf, ERC20_allowance,
     ERC20_decreaseAllowance)
 from openzeppelin.token.erc20.interfaces.IERC20 import IERC20
 from openzeppelin.utils.constants import FALSE, TRUE
@@ -169,7 +169,6 @@ func ERC4626_mint{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_
 
     let (assets : Uint256) = ERC4626_previewMint(shares)
 
-    # TODO: make this transferFrom logic internal, it's also used in deposit
     let (asset : felt) = ERC4626_asset()
     let (caller : felt) = get_caller_address()
     let (vault : felt) = get_contract_address()
@@ -321,8 +320,10 @@ func uint256_unsigned_div_rem_up{range_check_ptr}(a : Uint256, b : Uint256) -> (
     if reminder_is_zero == TRUE:
         return (q)
     else:
-        let (rounded_up, _) = uint256_add(q, Uint256(low=1, high=0))
-        # TODO: check for add overflow
+        let (rounded_up, oof) = uint256_add(q, Uint256(low=1, high=0))
+        with_attr error_message("rounding overflow"):
+            assert oof = 0
+        end
         return (rounded_up)
     end
 end
