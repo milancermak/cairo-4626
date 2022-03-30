@@ -3,13 +3,13 @@
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.uint256 import Uint256
 
-from openzeppelin.token.erc20.library import (
+from contracts.lib.openzeppelin.token.erc20.library import (
     ERC20_name, ERC20_symbol, ERC20_totalSupply, ERC20_decimals, ERC20_balanceOf,
     ERC20_allowance, ERC20_initializer, ERC20_approve, ERC20_transfer, ERC20_transferFrom)
 
-from openzeppelin.utils.constants import TRUE
+from contracts.lib.openzeppelin.utils.constants import TRUE
 
-from erc4626.library import (
+from contracts.erc4626.library import (
     ERC4626_initializer, ERC4626_asset, ERC4626_totalAssets,
     ERC4626_convertToShares, ERC4626_convertToAssets,
     ERC4626_maxDeposit, ERC4626_previewDeposit, ERC4626_deposit,
