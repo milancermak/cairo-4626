@@ -1,15 +1,13 @@
-# TODO: update allowances where appropriate
-
 %lang starknet
 
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.starknet.common.syscalls import get_caller_address, get_contract_address
 from starkware.cairo.common.uint256 import (
-    ALL_ONES, Uint256, uint256_eq, uint256_add, uint256_mul, uint256_unsigned_div_rem, uint256_le)
+    ALL_ONES, Uint256, uint256_eq, uint256_add, uint256_mul, uint256_sub, uint256_unsigned_div_rem,
+    uint256_le)
 
 from openzeppelin.token.erc20.library import (
-    ERC20_initializer, ERC20_totalSupply, ERC20_mint, ERC20_burn, ERC20_balanceOf, ERC20_allowance,
-    ERC20_decreaseAllowance)
+    ERC20_initializer, ERC20_totalSupply, ERC20_mint, ERC20_burn, ERC20_balanceOf, ERC20_allowances)
 from openzeppelin.token.erc20.interfaces.IERC20 import IERC20
 from openzeppelin.utils.constants import FALSE, TRUE
 
@@ -221,10 +219,16 @@ func ERC4626_withdraw{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_ch
     let (shares : Uint256) = ERC4626_previewWithdraw(assets)
 
     let (caller : felt) = get_caller_address()
-    # TODO: replicate Solmate's logic here, when caller != owner?
 
-    with_attr error_message("caller not owner"):
-        assert caller = owner
+    if caller != owner:
+        decrease_allowance_by_amount(owner, caller, shares)
+        tempvar syscall_ptr = syscall_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar range_check_ptr = range_check_ptr
+    else:
+        tempvar syscall_ptr = syscall_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar range_check_ptr = range_check_ptr
     end
 
     ERC20_burn(owner, shares)
@@ -262,9 +266,16 @@ func ERC4626_redeem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_chec
     alloc_locals
 
     let (caller : felt) = get_caller_address()
-    # TODO: replicate Solmate's logic here, when caller != owner?
-    with_attr error_message("caller not owner"):
-        assert caller = owner
+
+    if caller != owner:
+        decrease_allowance_by_amount(owner, caller, shares)
+        tempvar syscall_ptr = syscall_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar range_check_ptr = range_check_ptr
+    else:
+        tempvar syscall_ptr = syscall_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar range_check_ptr = range_check_ptr
     end
 
     let (assets : Uint256) = ERC4626_previewRedeem(shares)
@@ -285,6 +296,34 @@ func ERC4626_redeem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_chec
     Withdraw.emit(caller=caller, receiver=receiver, owner=owner, assets=assets, shares=shares)
 
     return (assets)
+end
+
+#
+# allowance helper
+#
+
+func decrease_allowance_by_amount{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+        owner : felt, spender : felt, amount : Uint256):
+    alloc_locals
+
+    let (spender_allowance : Uint256) = ERC20_allowances.read(owner, spender)
+
+    let (max_allowance : Uint256) = uint256_max()
+    let (is_max_allowance) = uint256_eq(spender_allowance, max_allowance)
+    if is_max_allowance == 1:
+        return ()
+    end
+
+    with_attr error_message("insufficient allowance"):
+        # amount <= spender_allowance
+        let (is_spender_allowance_sufficient) = uint256_le(amount, spender_allowance)
+        assert is_spender_allowance_sufficient = 1
+    end
+
+    let (new_allowance : Uint256) = uint256_sub(spender_allowance, amount)
+    ERC20_allowances.write(owner, spender, new_allowance)
+
+    return ()
 end
 
 #

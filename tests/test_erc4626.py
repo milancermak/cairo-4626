@@ -161,6 +161,125 @@ async def test_mint_withdraw_flow(erc4626, users, asset):
 
 
 @pytest.mark.asyncio
+async def test_allowances(erc4626, users, asset):
+    asset_owner_signer, asset_owner_account = await users("asset_owner")
+    capo_signer, capo_account = await users("capo")
+    maxi_signer, maxi_account = await users("maxi")
+    mini_signer, mini_account = await users("mini")
+
+    amount = to_uint(100_000)
+
+    # mint assets to capo
+    await asset_owner_signer.send_transaction(
+        asset_owner_account,
+        asset.contract_address,
+        "mint",
+        [capo_account.contract_address, *amount],
+    )
+    assert (await asset.balanceOf(capo_account.contract_address).invoke()).result.balance == amount
+
+    # have capo get shares in valut
+    await capo_signer.send_transaction(
+        capo_account, asset.contract_address, "approve", [erc4626.contract_address, *UINT_MAX]
+    )
+    await capo_signer.send_transaction(
+        capo_account, erc4626.contract_address, "mint", [*amount, capo_account.contract_address]
+    )
+
+    # max approve maxi
+    await capo_signer.send_transaction(
+        capo_account,
+        erc4626.contract_address,
+        "approve",
+        [maxi_account.contract_address, *UINT_MAX],
+    )
+
+    # approve mini only for 10K
+    await capo_signer.send_transaction(
+        capo_account,
+        erc4626.contract_address,
+        "approve",
+        [mini_account.contract_address, *to_uint(10_000)],
+    )
+
+    #
+    # have maxi withdraw 50K assets from capo's vault position
+    #
+    assert (
+        await erc4626.balanceOf(capo_account.contract_address).invoke()
+    ).result.balance == to_uint(100_000)
+    assert (
+        await erc4626.balanceOf(maxi_account.contract_address).invoke()
+    ).result.balance == to_uint(0)
+    assert (
+        await asset.balanceOf(maxi_account.contract_address).invoke()
+    ).result.balance == to_uint(0)
+
+    await maxi_signer.send_transaction(
+        maxi_account,
+        erc4626.contract_address,
+        "withdraw",
+        [*to_uint(50_000), maxi_account.contract_address, capo_account.contract_address],
+    )
+
+    assert (
+        await erc4626.balanceOf(capo_account.contract_address).invoke()
+    ).result.balance == to_uint(50_000)
+    assert (
+        await erc4626.balanceOf(maxi_account.contract_address).invoke()
+    ).result.balance == to_uint(0)
+    assert (
+        await asset.balanceOf(maxi_account.contract_address).invoke()
+    ).result.balance == to_uint(50_000)
+    assert (
+        await erc4626.allowance(
+            capo_account.contract_address, maxi_account.contract_address
+        ).invoke()
+    ).result.remaining == UINT_MAX
+
+    #
+    # have mini withdraw 10K assets from capo's vaule position
+    #
+    assert (
+        await erc4626.balanceOf(mini_account.contract_address).invoke()
+    ).result.balance == to_uint(0)
+    assert (
+        await asset.balanceOf(mini_account.contract_address).invoke()
+    ).result.balance == to_uint(0)
+
+    await mini_signer.send_transaction(
+        mini_account,
+        erc4626.contract_address,
+        "withdraw",
+        [*to_uint(10_000), mini_account.contract_address, capo_account.contract_address],
+    )
+
+    assert (
+        await erc4626.balanceOf(capo_account.contract_address).invoke()
+    ).result.balance == to_uint(40_000)
+    assert (
+        await erc4626.balanceOf(mini_account.contract_address).invoke()
+    ).result.balance == to_uint(0)
+    assert (
+        await asset.balanceOf(mini_account.contract_address).invoke()
+    ).result.balance == to_uint(10_000)
+    assert (
+        await erc4626.allowance(
+            capo_account.contract_address, mini_account.contract_address
+        ).invoke()
+    ).result.remaining == to_uint(0)
+
+    # mini tries withdrawing again, has insufficient allowance, :burn:
+    with pytest.raises(StarkException):
+        await mini_signer.send_transaction(
+            mini_account,
+            erc4626.contract_address,
+            "withdraw",
+            [*to_uint(1), mini_account.contract_address, capo_account.contract_address],
+        )
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("uint256, expected", [((0, 0), 1), ((1, 0), 0), ((0, 1), 0)])
 async def test_uint256_is_zero(terc4626, uint256, expected):
     tx = await terc4626.test_uint256_is_zero(uint256).invoke()
