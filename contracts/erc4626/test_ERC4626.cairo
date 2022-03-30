@@ -6,7 +6,7 @@
 
 from starkware.cairo.common.uint256 import Uint256
 
-from library import uint256_is_zero, uint256_max, uint256_mul_checked, uint256_unsigned_div_rem_up
+from contracts.erc4626.library import uint256_is_zero, uint256_max, uint256_mul_checked, uint256_unsigned_div_rem_up
 
 @view
 func test_uint256_is_zero{range_check_ptr}(v : Uint256) -> (yesno : felt):
