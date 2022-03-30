@@ -1,10 +1,10 @@
 # cairo-4626
 
+![tests](https://github.com/milancermak/cairo-4626/actions/workflows/tests.yml/badge.svg)
+
 Minimal [EIP 4626](https://eips.ethereum.org/EIPS/eip-4626) implementation in Cairo lang for [StarkNet](https://starknet.io/).
 
-The contract is based on OpenZeppelin's ERC20 implementation and overal contract structure and heavily inspired by Solmate's ERC4626.sol.
-
-A word of warning - the repo is still a work in progress, at minimum tests and proper documentation is still missing.
+The contract is based on OpenZeppelin's ERC20 implementation. It is heavily inspired by Solmate's ERC4626.sol.
 
 ## Compiling
 
