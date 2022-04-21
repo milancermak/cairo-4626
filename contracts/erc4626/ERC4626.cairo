@@ -5,7 +5,7 @@ from starkware.cairo.common.uint256 import Uint256
 
 from contracts.lib.openzeppelin.token.erc20.library import (
     ERC20_name, ERC20_symbol, ERC20_totalSupply, ERC20_decimals, ERC20_balanceOf,
-    ERC20_allowance, ERC20_initializer, ERC20_approve, ERC20_transfer, ERC20_transferFrom)
+    ERC20_allowance, ERC20_approve, ERC20_transfer, ERC20_transferFrom)
 
 from contracts.lib.openzeppelin.utils.constants import TRUE
 
