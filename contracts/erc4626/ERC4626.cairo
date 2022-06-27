@@ -139,14 +139,14 @@ end
 @view
 func previewDeposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
         assets : Uint256) -> (shares : Uint256):
-    let (shares) = ERC4626_previewDeposit(assets)
+    let (shares : Uint256) = ERC4626_previewDeposit(assets)
     return (shares)
 end
 
 @external
 func deposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
         assets : Uint256, receiver : felt) -> (shares : Uint256):
-    let (shares) = ERC4626_deposit(assets, receiver)
+    let (shares : Uint256) = ERC4626_deposit(assets, receiver)
     return (shares)
 end
 
@@ -160,7 +160,7 @@ end
 @view
 func previewMint{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
         shares : Uint256) -> (assets : Uint256):
-    let (assets) = ERC4626_previewMint(shares)
+    let (assets : Uint256) = ERC4626_previewMint(shares)
     return (assets)
 end
 
