@@ -5,7 +5,7 @@ from typing import Callable, Tuple
 from utils import Signer, str_to_felt, to_uint
 
 import pytest
-from starkware.starknet.services.api.contract_definition import ContractDefinition
+from starkware.starknet.services.api.contract_class import ContractClass
 from starkware.starknet.compiler.compile import compile_starknet_files
 from starkware.starknet.testing.starknet import Starknet, StarknetContract
 
@@ -18,7 +18,7 @@ def contract_path(contract_name: str) -> str:
     return os.path.join(here(), "..", "contracts", "erc4626", contract_name)
 
 
-def compile_contract(contract_name: str) -> ContractDefinition:
+def compile_contract(contract_name: str) -> ContractClass:
     contract_src = contract_path(contract_name)
     return compile_starknet_files(
         [contract_src],
@@ -30,7 +30,7 @@ def compile_contract(contract_name: str) -> ContractDefinition:
     )
 
 
-def compile_mock_contract(contract_name: str) -> ContractDefinition:
+def compile_mock_contract(contract_name: str) -> ContractClass:
     contract_src = os.path.join(here(), "mocks", contract_name)
     return compile_starknet_files(
         [contract_src], debug_info=True, cairo_path=[os.path.join(here(), "mocks")]
@@ -60,7 +60,7 @@ def users(starknet) -> Callable[[str], Tuple[Signer, StarknetContract]]:
 
         signer = Signer(abs(hash(name)))
         account = await starknet.deploy(
-            contract_def=account_contract, constructor_calldata=[signer.public_key]
+            contract_class=account_contract, constructor_calldata=[signer.public_key]
         )
 
         user = (signer, account)
@@ -76,7 +76,7 @@ async def asset(starknet, users) -> StarknetContract:
     _, asset_owner = await users("asset_owner")
 
     return await starknet.deploy(
-        contract_def=contract,
+        contract_class=contract,
         constructor_calldata=[
             str_to_felt("Winning"),  # name
             str_to_felt("WIN"),  # symbol
@@ -93,7 +93,7 @@ async def erc4626(starknet, asset) -> StarknetContract:
     contract = compile_contract("ERC4626.cairo")
 
     return await starknet.deploy(
-        contract_def=contract,
+        contract_class=contract,
         constructor_calldata=[
             str_to_felt("Vault of Winning"),
             str_to_felt("vWIN"),
@@ -105,4 +105,4 @@ async def erc4626(starknet, asset) -> StarknetContract:
 @pytest.fixture(scope="session")
 async def terc4626(starknet) -> StarknetContract:
     contract = compile_contract("test_ERC4626.cairo")
-    return await starknet.deploy(contract_def=contract)
+    return await starknet.deploy(contract_class=contract)
