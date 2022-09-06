@@ -128,7 +128,7 @@ namespace ERC4626:
 
         let (shares : Uint256) = ERC4626.preview_deposit(assets)
         let (shares_is_zero : felt) = uint256_is_zero(shares)
-        with_attr error_message("zero shares"):
+        with_attr error_message("ERC4626: zero shares"):
             assert shares_is_zero = FALSE
         end
 
@@ -139,7 +139,7 @@ namespace ERC4626:
         let (success : felt) = IERC20.transferFrom(
             contract_address=asset, sender=caller, recipient=vault, amount=assets
         )
-        with_attr error_message("transfer failed"):
+        with_attr error_message("ERC4626: transfer failed"):
             assert success = TRUE
         end
 
@@ -193,7 +193,7 @@ namespace ERC4626:
         let (success : felt) = IERC20.transferFrom(
             contract_address=asset, sender=caller, recipient=vault, amount=assets
         )
-        with_attr error_message("transfer failed"):
+        with_attr error_message("ERC4626: transfer failed"):
             assert success = TRUE
         end
 
@@ -260,7 +260,7 @@ namespace ERC4626:
         let (success : felt) = IERC20.transfer(
             contract_address=asset, recipient=receiver, amount=assets
         )
-        with_attr error_message("transfer failed"):
+        with_attr error_message("ERC4626: transfer failed"):
             assert success = TRUE
         end
 
@@ -307,7 +307,7 @@ namespace ERC4626:
 
         let (assets : Uint256) = ERC4626.preview_redeem(shares)
         let (is_zero_assets : felt) = uint256_is_zero(assets)
-        with_attr error_message("zero assets"):
+        with_attr error_message("ERC4626: zero assets"):
             assert is_zero_assets = FALSE
         end
 
@@ -317,7 +317,7 @@ namespace ERC4626:
         let (success : felt) = IERC20.transfer(
             contract_address=asset, recipient=receiver, amount=assets
         )
-        with_attr error_message("transfer failed"):
+        with_attr error_message("ERC4626: transfer failed"):
             assert success = TRUE
         end
 
@@ -344,7 +344,7 @@ func decrease_allowance_by_amount{
         return ()
     end
 
-    with_attr error_message("insufficient allowance"):
+    with_attr error_message("ERC4626: insufficient allowance"):
         # amount <= spender_allowance
         let (is_spender_allowance_sufficient) = uint256_le(amount, spender_allowance)
         assert is_spender_allowance_sufficient = 1
@@ -374,7 +374,7 @@ func uint256_mul_checked{range_check_ptr}(a : Uint256, b : Uint256) -> (product 
 
     let (product, carry) = uint256_mul(a, b)
     let (in_range) = uint256_is_zero(carry)
-    with_attr error_message("number too big"):
+    with_attr error_message("ERC4626: number too big"):
         assert in_range = TRUE
     end
     return (product)
@@ -390,7 +390,7 @@ func uint256_unsigned_div_rem_up{range_check_ptr}(a : Uint256, b : Uint256) -> (
         return (q)
     else:
         let (rounded_up, oof) = uint256_add(q, Uint256(low=1, high=0))
-        with_attr error_message("rounding overflow"):
+        with_attr error_message("ERC4626: rounding overflow"):
             assert oof = 0
         end
         return (rounded_up)
