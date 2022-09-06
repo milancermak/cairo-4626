@@ -1,6 +1,7 @@
 %lang starknet
 
 from starkware.cairo.common.cairo_builtins import HashBuiltin
+from starkware.cairo.common.bool import TRUE, FALSE
 from starkware.starknet.common.syscalls import get_caller_address, get_contract_address
 from starkware.cairo.common.uint256 import (
     ALL_ONES,
@@ -13,16 +14,8 @@ from starkware.cairo.common.uint256 import (
     uint256_le,
 )
 
-from openzeppelin.token.erc20.library import (
-    ERC20_initializer,
-    ERC20_totalSupply,
-    ERC20_mint,
-    ERC20_burn,
-    ERC20_balanceOf,
-    ERC20_allowances,
-)
-from openzeppelin.token.erc20.interfaces.IERC20 import IERC20
-from openzeppelin.utils.constants import FALSE, TRUE
+from contracts.lib.openzeppelin.token.erc20.library import ERC20, ERC20_allowances
+from contracts.lib.openzeppelin.token.erc20.IERC20 import IERC20
 
 @event
 func Deposit(caller : felt, owner : felt, assets : Uint256, shares : Uint256):
@@ -49,7 +42,7 @@ namespace ERC4626:
         name : felt, symbol : felt, asset_addr : felt
     ):
         let (decimals) = IERC20.decimals(contract_address=asset_addr)
-        ERC20_initializer(name, symbol, decimals)
+        ERC20.initializer(name, symbol, decimals)
         ERC4626_asset_addr.write(asset_addr)
         return ()
     end
@@ -65,7 +58,7 @@ namespace ERC4626:
         return (asset)
     end
 
-    func totalAssets{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
+    func total_assets{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
         totalManagedAssets : Uint256
     ):
         let (asset : felt) = ERC4626.asset()
@@ -74,36 +67,36 @@ namespace ERC4626:
         return (total)
     end
 
-    func convertToShares{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    func convert_to_shares{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
         assets : Uint256
     ) -> (shares : Uint256):
         alloc_locals
 
-        let (total_supply : Uint256) = ERC20_totalSupply()
+        let (total_supply : Uint256) = ERC20.total_supply()
         let (is_total_supply_zero : felt) = uint256_is_zero(total_supply)
 
         if is_total_supply_zero == TRUE:
             return (assets)
         else:
             let (product : Uint256) = uint256_mul_checked(assets, total_supply)
-            let (total_assets : Uint256) = ERC4626.totalAssets()
+            let (total_assets : Uint256) = ERC4626.total_assets()
             let (shares, _) = uint256_unsigned_div_rem(product, total_assets)
             return (shares)
         end
     end
 
-    func convertToAssets{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    func convert_to_assets{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
         shares : Uint256
     ) -> (assets : Uint256):
         alloc_locals
 
-        let (total_supply : Uint256) = ERC20_totalSupply()
+        let (total_supply : Uint256) = ERC20.total_supply()
         let (is_total_supply_zero : felt) = uint256_is_zero(total_supply)
 
         if is_total_supply_zero == TRUE:
             return (shares)
         else:
-            let (total_assets : Uint256) = ERC4626.totalAssets()
+            let (total_assets : Uint256) = ERC4626.total_assets()
             let (product : Uint256) = uint256_mul_checked(shares, total_assets)
             let (assets, _) = uint256_unsigned_div_rem(product, total_supply)
             return (assets)
@@ -114,17 +107,17 @@ namespace ERC4626:
     # # Deposit
     #
 
-    func maxDeposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    func max_deposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
         receiver : felt
     ) -> (maxAssets : Uint256):
         let (maxAssets : Uint256) = uint256_max()
         return (maxAssets)
     end
 
-    func previewDeposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    func preview_deposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
         assets : Uint256
     ) -> (shares : Uint256):
-        let (shares) = ERC4626.convertToShares(assets)
+        let (shares) = ERC4626.convert_to_shares(assets)
         return (shares)
     end
 
@@ -133,7 +126,7 @@ namespace ERC4626:
     ) -> (shares : Uint256):
         alloc_locals
 
-        let (shares : Uint256) = ERC4626.previewDeposit(assets)
+        let (shares : Uint256) = ERC4626.preview_deposit(assets)
         let (shares_is_zero : felt) = uint256_is_zero(shares)
         with_attr error_message("zero shares"):
             assert shares_is_zero = FALSE
@@ -150,7 +143,7 @@ namespace ERC4626:
             assert success = TRUE
         end
 
-        ERC20_mint(receiver, shares)
+        ERC20._mint(receiver, shares)
 
         Deposit.emit(caller=caller, owner=receiver, assets=assets, shares=shares)
 
@@ -161,25 +154,25 @@ namespace ERC4626:
     # # Mint
     #
 
-    func maxMint{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    func max_mint{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
         receiver : felt
     ) -> (maxShares : Uint256):
         let (maxShares) = uint256_max()
         return (maxShares)
     end
 
-    func previewMint{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    func preview_mint{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
         shares : Uint256
     ) -> (assets : Uint256):
         alloc_locals
 
-        let (total_supply : Uint256) = ERC20_totalSupply()
+        let (total_supply : Uint256) = ERC20.total_supply()
         let (is_total_supply_zero : felt) = uint256_is_zero(total_supply)
 
         if is_total_supply_zero == TRUE:
             return (shares)
         else:
-            let (total_assets : Uint256) = ERC4626.totalAssets()
+            let (total_assets : Uint256) = ERC4626.total_assets()
             let (product : Uint256) = uint256_mul_checked(shares, total_assets)
             let (assets) = uint256_unsigned_div_rem_up(product, total_supply)
             return (assets)
@@ -191,7 +184,7 @@ namespace ERC4626:
     ) -> (assets : Uint256):
         alloc_locals
 
-        let (assets : Uint256) = ERC4626.previewMint(shares)
+        let (assets : Uint256) = ERC4626.preview_mint(shares)
 
         let (asset : felt) = ERC4626.asset()
         let (caller : felt) = get_caller_address()
@@ -204,7 +197,7 @@ namespace ERC4626:
             assert success = TRUE
         end
 
-        ERC20_mint(receiver, shares)
+        ERC20._mint(receiver, shares)
 
         Deposit.emit(caller=caller, owner=receiver, assets=assets, shares=shares)
 
@@ -215,26 +208,26 @@ namespace ERC4626:
     # # Withdraw
     #
 
-    func maxWithdraw{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    func max_withdraw{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
         owner : felt
     ) -> (maxAssets : Uint256):
-        let (owner_balance : Uint256) = ERC20_balanceOf(owner)
-        let (maxAssets : Uint256) = ERC4626.convertToAssets(owner_balance)
+        let (owner_balance : Uint256) = ERC20.balance_of(owner)
+        let (maxAssets : Uint256) = ERC4626.convert_to_assets(owner_balance)
         return (maxAssets)
     end
 
-    func previewWithdraw{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    func preview_withdraw{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
         assets : Uint256
     ) -> (shares : Uint256):
         alloc_locals
 
-        let (total_supply : Uint256) = ERC20_totalSupply()
+        let (total_supply : Uint256) = ERC20.total_supply()
         let (is_total_supply_zero : felt) = uint256_is_zero(total_supply)
 
         if is_total_supply_zero == TRUE:
             return (assets)
         else:
-            let (total_assets : Uint256) = ERC4626.totalAssets()
+            let (total_assets : Uint256) = ERC4626.total_assets()
             let (product : Uint256) = uint256_mul_checked(assets, total_supply)
             let (shares : Uint256) = uint256_unsigned_div_rem_up(product, total_assets)
             return (shares)
@@ -246,7 +239,7 @@ namespace ERC4626:
     ) -> (shares : Uint256):
         alloc_locals
 
-        let (shares : Uint256) = ERC4626.previewWithdraw(assets)
+        let (shares : Uint256) = ERC4626.preview_withdraw(assets)
 
         let (caller : felt) = get_caller_address()
 
@@ -261,7 +254,7 @@ namespace ERC4626:
             tempvar range_check_ptr = range_check_ptr
         end
 
-        ERC20_burn(owner, shares)
+        ERC20._burn(owner, shares)
 
         let (asset : felt) = ERC4626.asset()
         let (success : felt) = IERC20.transfer(
@@ -280,17 +273,17 @@ namespace ERC4626:
     # # REDEEM
     #
 
-    func maxRedeem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    func max_redeem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
         owner : felt
     ) -> (maxShares : Uint256):
-        let (maxShares : Uint256) = ERC20_balanceOf(owner)
+        let (maxShares : Uint256) = ERC20.balance_of(owner)
         return (maxShares)
     end
 
-    func previewRedeem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    func preview_redeem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
         shares : Uint256
     ) -> (assets : Uint256):
-        let (assets : Uint256) = ERC4626.convertToAssets(shares)
+        let (assets : Uint256) = ERC4626.convert_to_assets(shares)
         return (assets)
     end
 
@@ -312,13 +305,13 @@ namespace ERC4626:
             tempvar range_check_ptr = range_check_ptr
         end
 
-        let (assets : Uint256) = ERC4626.previewRedeem(shares)
+        let (assets : Uint256) = ERC4626.preview_redeem(shares)
         let (is_zero_assets : felt) = uint256_is_zero(assets)
         with_attr error_message("zero assets"):
             assert is_zero_assets = FALSE
         end
 
-        ERC20_burn(owner, shares)
+        ERC20._burn(owner, shares)
 
         let (asset : felt) = ERC4626.asset()
         let (success : felt) = IERC20.transfer(
