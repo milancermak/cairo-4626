@@ -1,13 +1,15 @@
 import asyncio
 import os
-from typing import Callable, Tuple
 
-from utils import Signer, str_to_felt, to_uint
+from utils import str_to_felt, to_uint
 
 import pytest
 from starkware.starknet.services.api.contract_class import ContractClass
 from starkware.starknet.compiler.compile import compile_starknet_files
 from starkware.starknet.testing.starknet import Starknet, StarknetContract
+
+
+ASSET_OWNER = str_to_felt("assert owner")
 
 
 def here() -> str:
@@ -32,9 +34,7 @@ def compile_contract(contract_name: str) -> ContractClass:
 
 def compile_mock_contract(contract_name: str) -> ContractClass:
     contract_src = os.path.join(here(), "mocks", contract_name)
-    return compile_starknet_files(
-        [contract_src], debug_info=True, cairo_path=[os.path.join(here(), "mocks")]
-    )
+    return compile_starknet_files([contract_src], debug_info=True, cairo_path=[os.path.join(here(), "mocks")])
 
 
 @pytest.fixture(scope="session")
@@ -49,31 +49,10 @@ async def starknet() -> Starknet:
 
 
 @pytest.fixture(scope="session")
-def users(starknet) -> Callable[[str], Tuple[Signer, StarknetContract]]:
-    account_contract = compile_mock_contract("openzeppelin/account/Account.cairo")
-    cache = {}
-
-    async def get_or_create_user(name):
-        hit = cache.get(name)
-        if hit:
-            return hit
-
-        signer = Signer(abs(hash(name)))
-        account = await starknet.deploy(
-            contract_class=account_contract, constructor_calldata=[signer.public_key]
-        )
-
-        user = (signer, account)
-        cache[name] = user
-        return user
-
-    return get_or_create_user
-
-
-@pytest.fixture(scope="session")
-async def asset(starknet, users) -> StarknetContract:
+async def asset(
+    starknet,
+) -> StarknetContract:
     contract = compile_mock_contract("openzeppelin/token/erc20/ERC20_Mintable.cairo")
-    _, asset_owner = await users("asset_owner")
 
     return await starknet.deploy(
         contract_class=contract,
@@ -81,9 +60,9 @@ async def asset(starknet, users) -> StarknetContract:
             str_to_felt("Winning"),  # name
             str_to_felt("WIN"),  # symbol
             18,  # decimals
-            *to_uint(10 ** 18),  # initial supply
-            asset_owner.contract_address,  # recipient
-            asset_owner.contract_address,  # owner
+            *to_uint(10**18),  # initial supply
+            ASSET_OWNER,  # recipient
+            ASSET_OWNER,  # owner
         ],
     )
 
